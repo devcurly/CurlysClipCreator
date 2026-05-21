@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, dialog } = require('electron')
 const { spawn } = require('child_process')
 const path = require('path')
 const http = require('http')
@@ -25,24 +25,48 @@ function getFrontendDist() {
   return path.join(__dirname, '..', 'frontend', 'dist')
 }
 
+function getBackendExe() {
+  const dir = getBackendDir()
+  if (app.isPackaged) {
+    return path.join(dir, 'backend.exe')
+  }
+  // In dev: detect if compiled EXE exists, otherwise fall back to python
+  const exePath = path.join(dir, 'dist', 'backend.exe')
+  if (fs.existsSync(exePath)) {
+    return exePath
+  }
+  return null
+}
+
 function startBackend() {
   const backendDir = getBackendDir()
   const staticDir = getFrontendDist()
+  const backendExe = getBackendExe()
 
-  if (!fs.existsSync(backendDir + '\\main.py')) {
-    console.error('Backend not found at:', backendDir)
+  if (backendExe) {
+    backendProcess = spawn(backendExe, [], {
+      cwd: backendDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        STATIC_DIR: staticDir,
+        PORT: String(BACKEND_PORT)
+      }
+    })
+  } else if (fs.existsSync(path.join(backendDir, 'main.py'))) {
+    backendProcess = spawn('python', ['main.py'], {
+      cwd: backendDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        STATIC_DIR: staticDir,
+        PORT: String(BACKEND_PORT)
+      }
+    })
+  } else {
+    dialog.showErrorBox('Backend Not Found', `Could not find backend at:\n${backendDir}`)
     return
   }
-
-  backendProcess = spawn('python', ['main.py'], {
-    cwd: backendDir,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      STATIC_DIR: staticDir,
-      PORT: String(BACKEND_PORT)
-    }
-  })
 
   backendProcess.stdout.on('data', (data) => {
     console.log('[backend]', data.toString().trim())
@@ -54,10 +78,14 @@ function startBackend() {
 
   backendProcess.on('error', (err) => {
     console.error('Failed to start backend:', err)
+    dialog.showErrorBox('Backend Error', `Failed to start the backend process.\n\n${err.message}\n\nMake sure Python is installed and in your PATH.`)
   })
 
   backendProcess.on('exit', (code) => {
     console.log('Backend exited with code:', code)
+    if (code !== 0 && !mainWindow) {
+      dialog.showErrorBox('Backend Error', `The backend process exited unexpectedly (code: ${code}).\n\nThe app will close.`)
+    }
   })
 }
 
@@ -98,6 +126,7 @@ function createWindow() {
     maximizable: false,
     fullscreenable: false,
     title: 'Curlys Clip Creator',
+    icon: path.join(__dirname, '..', 'Icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -119,6 +148,7 @@ app.whenReady().then(async () => {
     createWindow()
   } catch (err) {
     console.error('Failed:', err.message)
+    dialog.showErrorBox('Backend Not Ready', `The backend did not start in time.\n\n${err.message}\n\nMake sure:\n- Python 3.14+ is installed and in PATH\n- Required packages are installed (pip install -r requirements.txt)`)
     app.quit()
   }
 })

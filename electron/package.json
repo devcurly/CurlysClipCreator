@@ -16,14 +16,12 @@
     "files": [
       "main.js",
       "package.json",
-      "../backend/**/*",
       "../frontend/dist/**/*"
     ],
     "extraResources": [
       {
-        "from": "../backend",
-        "to": "backend",
-        "filter": ["**/*"]
+        "from": "../backend/dist/backend.exe",
+        "to": "backend/backend.exe"
       },
       {
         "from": "../frontend/dist",
