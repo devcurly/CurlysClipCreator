@@ -1,0 +1,44 @@
+{
+  "name": "curlys-clip-creator",
+  "version": "1.0.0",
+  "description": "Curlys Clip Creator - Scene Splitter",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win"
+  },
+  "build": {
+    "appId": "curlys.clip-creator",
+    "productName": "Curlys Clip Creator",
+    "directories": {
+      "output": "../dist-exe"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "../backend/**/*",
+      "../frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "../Icon.ico",
+      "signAndEditExecutable": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
