@@ -1,5 +1,5 @@
 const { app, BrowserWindow, dialog } = require('electron')
-const { spawn } = require('child_process')
+const { spawn, execFile } = require('child_process')
 const path = require('path')
 const http = require('http')
 const fs = require('fs')
@@ -27,15 +27,53 @@ function getFrontendDist() {
 
 function getBackendExe() {
   const dir = getBackendDir()
-  if (app.isPackaged) {
-    return path.join(dir, 'backend.exe')
-  }
-  // In dev: detect if compiled EXE exists, otherwise fall back to python
-  const exePath = path.join(dir, 'dist', 'backend.exe')
+  const exePath = path.join(dir, 'backend.exe')
   if (fs.existsSync(exePath)) {
     return exePath
   }
+  const devExe = path.join(dir, 'dist', 'backend.exe')
+  if (fs.existsSync(devExe)) {
+    return devExe
+  }
   return null
+}
+
+function findPython() {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('python', ['--version'], { shell: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    let output = ''
+    proc.stdout.on('data', (d) => { output += d })
+    proc.stderr.on('data', (d) => { output += d })
+    proc.on('error', () => reject(new Error('Python not found in PATH')))
+    proc.on('close', (code) => {
+      if (code === 0) resolve('python')
+      else reject(new Error('Python check failed: ' + output.trim()))
+    })
+  })
+}
+
+function installDependencies() {
+  return new Promise((resolve, reject) => {
+    const reqFile = path.join(getBackendDir(), 'requirements.txt')
+    if (!fs.existsSync(reqFile)) {
+      resolve()
+      return
+    }
+
+    const proc = spawn('python', ['-m', 'pip', 'install', '-r', reqFile], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+
+    let output = ''
+    proc.stdout.on('data', (d) => { output += d })
+    proc.stderr.on('data', (d) => { output += d })
+
+    proc.on('error', (err) => reject(err))
+    proc.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error('pip install failed (exit ' + code + '): ' + output.trim()))
+    })
+  })
 }
 
 function startBackend() {
@@ -78,13 +116,13 @@ function startBackend() {
 
   backendProcess.on('error', (err) => {
     console.error('Failed to start backend:', err)
-    dialog.showErrorBox('Backend Error', `Failed to start the backend process.\n\n${err.message}\n\nMake sure Python is installed and in your PATH.`)
+    dialog.showErrorBox('Backend Error', `Failed to start backend.\n\n${err.message}`)
   })
 
   backendProcess.on('exit', (code) => {
     console.log('Backend exited with code:', code)
     if (code !== 0 && !mainWindow) {
-      dialog.showErrorBox('Backend Error', `The backend process exited unexpectedly (code: ${code}).\n\nThe app will close.`)
+      dialog.showErrorBox('Backend Error', `Backend exited unexpectedly (code: ${code}).`)
     }
   })
 }
@@ -142,13 +180,16 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  startBackend()
   try {
+    await findPython()
+    await installDependencies()
+    startBackend()
     await waitForBackend()
     createWindow()
   } catch (err) {
     console.error('Failed:', err.message)
-    dialog.showErrorBox('Backend Not Ready', `The backend did not start in time.\n\n${err.message}\n\nMake sure:\n- Python 3.14+ is installed and in PATH\n- Required packages are installed (pip install -r requirements.txt)`)
+    dialog.showErrorBox('Setup Error',
+      `${err.message}\n\nMake sure Python 3.14+ is installed and in PATH.\nhttps://www.python.org/downloads/`)
     app.quit()
   }
 })
