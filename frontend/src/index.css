@@ -8,8 +8,8 @@
   --text: #e8e6df;
   --muted: #6b6b65;
   --dim: #3a3a36;
-  --accent: #3b82f6;
-  --accent-dark: #1d4ed8;
+  --accent: #0059ff;
+  --accent-dark: #2600ff;
   --danger: #ff5c47;
   --mono: ui-monospace, 'Cascadia Code', 'Fira Mono', 'Consolas', monospace;
 }
@@ -29,12 +29,11 @@ body {
 }
 
 #root {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
   position: relative;
-  min-height: 100vh;
 }
 
 #root::before {

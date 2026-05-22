@@ -10,7 +10,7 @@ def detect_scenes_ffmpeg(video_path: str, threshold: float = 0.3) -> list[float]
         "-filter:v", f"select='gt(scene,{threshold})',showinfo",
         "-f", "null", "-"
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
     timestamps = []
     for line in result.stderr.split("\n"):
         if "pts_time:" in line:
@@ -28,7 +28,7 @@ def get_video_duration(video_path: str) -> float:
         "-show_entries", "format=duration",
         "-of", "json", video_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
     try:
         data = json.loads(result.stdout)
         return float(data["format"]["duration"])
@@ -38,7 +38,7 @@ def get_video_duration(video_path: str) -> float:
             "-show_entries", "stream=duration",
             "-of", "json", video_path
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             data = json.loads(result.stdout)
             for stream in data.get("streams", []):
@@ -49,7 +49,7 @@ def get_video_duration(video_path: str) -> float:
             pass
 
         cmd = ["ffprobe", "-v", "error", "-show_format", "-of", "json", video_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             data = json.loads(result.stdout)
             return float(data["format"]["duration"])
@@ -57,7 +57,7 @@ def get_video_duration(video_path: str) -> float:
             pass
 
         cmd = ["ffmpeg", "-i", video_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
         match = re.search(r"Duration: (\d+):(\d+):(\d+\.\d+)", result.stderr)
         if match:
             h, m, s = float(match.group(1)), float(match.group(2)), float(match.group(3))

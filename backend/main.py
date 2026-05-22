@@ -1,4 +1,4 @@
-import os
+import os, sys
 import json
 import asyncio
 import uuid
@@ -10,11 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 import uvicorn
 
-from detector import detect_scenes_ffmpeg, get_video_duration, build_scene_ranges
-from splitter import split_all_scenes_sync
+from backend.detector import detect_scenes_ffmpeg, get_video_duration, build_scene_ranges
+from backend.splitter import split_all_scenes_sync
 
 OUTPUT_ROOT = Path.home() / "Videos" / "Curlys Clip Creator"
-STATIC_DIR = Path(os.environ.get("STATIC_DIR", str(Path(__file__).resolve().parent.parent / "frontend" / "dist")))
+if getattr(sys, 'frozen', False):
+    STATIC_DIR = Path(os.environ.get("STATIC_DIR", str(Path(sys._MEIPASS) / "frontend" / "dist")))
+else:
+    STATIC_DIR = Path(os.environ.get("STATIC_DIR", str(Path(__file__).resolve().parent.parent / "frontend" / "dist")))
 
 app = FastAPI(title="Curlys Clip Creator")
 
@@ -213,4 +216,4 @@ async def serve_static(full_path: str):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="127.0.0.1", port=port, reload=False, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

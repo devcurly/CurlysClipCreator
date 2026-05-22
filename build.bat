@@ -5,7 +5,7 @@ echo   Building Curlys Clip Creator
 echo ========================================
 echo.
 
-echo [1/4] Building frontend...
+echo [1/3] Building frontend...
 cd /d "%~dp0frontend"
 call npm run build
 if %errorlevel% neq 0 (
@@ -15,29 +15,18 @@ if %errorlevel% neq 0 (
 )
 echo OK
 
-echo [2/4] Packaging Electron app...
-cd /d "%~dp0electron"
-call npx electron-builder build --win
-if %errorlevel% neq 0 (
-    echo FAILED: Electron build error
-    pause
-    exit /b 1
-)
-echo OK
-
-echo [3/4] Building installer EXE (PyInstaller)...
+echo [2/3] Compiling app (PyInstaller)...
 cd /d "%~dp0"
 pip install pyinstaller -q 2>nul
-"%APPDATA%\Python\Python314\Scripts\pyinstaller.exe" --onefile --noconsole --distpath dist-exe --workpath build --specpath . --add-data "Icon.ico;." --icon Icon.ico --name "Curlys Clip Creator Installer" installer.py >nul
+"%APPDATA%\Python\Python314\Scripts\pyinstaller.exe" --onefile --noconsole --distpath dist-exe --workpath build --specpath . --name "Curlys Clip Creator" --add-data "frontend\dist;frontend\dist" --add-data "Icon.ico;." --icon Icon.ico --hidden-import uvicorn --hidden-import fastapi --hidden-import pydantic --hidden-import starlette --hidden-import websockets --hidden-import httptools --hidden-import multipart app.py >nul
 if %errorlevel% neq 0 (
-    echo FAILED: Installer build error
+    echo FAILED: PyInstaller build error
     pause
     exit /b 1
 )
 echo OK
 
-echo [4/4] Cleaning up build artifacts...
-cd /d "%~dp0"
+echo [3/3] Cleaning up build artifacts...
 if exist "build" rmdir /s /q "build"
 if exist "*.spec" del /q "*.spec"
 echo OK
@@ -45,9 +34,7 @@ echo OK
 echo.
 echo ========================================
 echo   DONE!
-echo   Portable:  dist-exe\Curlys Clip Creator 1.0.0.exe
-echo   Installer: dist-exe\Curlys Clip Creator Installer.exe
-echo   (plus win-unpacked\ folder)
+echo   EXE: dist-exe\Curlys Clip Creator.exe
 echo ========================================
 echo.
 pause
